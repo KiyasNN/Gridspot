@@ -377,7 +377,9 @@ let S = { key: '', secret: '', prices: {} };
 // ── SIGN ──
 async function sign(qs) {
   const enc = new TextEncoder();
-  const k = await crypto.subtle.importKey('raw', enc.encode(S.secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const keyData = enc.encode(S.secret);
+  const algo = { name: 'HMAC', hash: { name: 'SHA-256' } };
+  const k = await crypto.subtle.importKey('raw', keyData.buffer, algo, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', k, enc.encode(qs));
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2,'0')).join('');
 }
