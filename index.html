@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>GRIDBOT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #080810;
+    --surface: #0f0f1a;
+    --surface2: #171724;
+    --border: #252535;
+    --accent: #f0c94d;
+    --green: #4df0a0;
+    --red: #f04d6a;
+    --text: #e8e8f0;
+    --muted: #606080;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(240,201,77,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,201,77,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 16px 14px 90px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); }
+  .logo span { color: var(--text); }
+  .conn-status { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: all 0.3s; }
+  .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .conn-label { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--muted); letter-spacing: 1px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* ALERT */
+  .alert {
+    padding: 11px 13px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .alert-warn { background: rgba(240,201,77,.07); border: 1px solid rgba(240,201,77,.2); color: var(--accent); }
+  .alert-error { background: rgba(240,77,106,.07); border: 1px solid rgba(240,77,106,.2); color: var(--red); }
+  .alert-ok { background: rgba(77,240,160,.07); border: 1px solid rgba(77,240,160,.2); color: var(--green); }
+
+  /* FIELD */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; letter-spacing: 1px; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 13px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--muted); }
+  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23606080' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; }
+  .field select option { background: #171724; }
+
+  /* BTN */
+  .btn {
+    border: none; border-radius: 12px; cursor: pointer;
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    letter-spacing: 0.5px; transition: all 0.15s;
+    -webkit-appearance: none;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { width: 100%; padding: 15px; background: var(--accent); color: #000; font-size: 14px; text-transform: uppercase; }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+  .btn-sm { padding: 9px 14px; background: var(--surface2); color: var(--accent); border: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  .btn-danger { padding: 8px 13px; background: transparent; border: 1px solid var(--red); color: var(--red); font-size: 11px; text-transform: uppercase; }
+
+  /* BALANCE */
+  .bal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .bal-item { background: var(--surface2); border-radius: 10px; padding: 12px; }
+  .bal-label { font-size: 9px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 4px; letter-spacing: 1px; }
+  .bal-val { font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .bal-sub { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace; }
+
+  /* PRICE ROW */
+  .price-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--surface2); border-radius: 10px;
+    padding: 11px 13px; margin-bottom: 12px;
+  }
+  .price-label { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .price-val { font-size: 17px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .price-chg { font-size: 12px; font-family: 'Space Mono', monospace; font-weight: 700; }
+  .up { color: var(--green); }
+  .dn { color: var(--red); }
+
+  /* GRID PREVIEW */
+  .grid-preview { background: var(--surface2); border-radius: 10px; padding: 12px; margin: 12px 0; }
+  .grid-bars { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+  .gbar { height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .gbar-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.4s ease; }
+  .gbar.cur .gbar-fill { background: var(--green); }
+  .grid-labels { display: flex; justify-content: space-between; font-size: 10px; font-family: 'Space Mono', monospace; color: var(--muted); }
+
+  /* ESTIMATES */
+  .est-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .est-row:last-child { border-bottom: none; }
+  .est-label { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .est-val { font-size: 13px; font-weight: 600; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 10px 4px; border: none; border-radius: 9px; background: transparent; color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .tab.active { background: var(--surface2); color: var(--accent); }
+
+  /* BOT ITEM */
+  .bot-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 13px; margin-bottom: 10px; }
+  .bot-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .bot-pair { font-size: 15px; font-weight: 700; }
+  .bot-badge { font-size: 9px; font-family: 'Space Mono', monospace; padding: 3px 8px; border-radius: 20px; background: rgba(77,240,160,.1); color: var(--green); border: 1px solid rgba(77,240,160,.2); }
+  .bot-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .bot-stat { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .bot-stat-val { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 3px; }
+  .bot-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+  /* TICKER */
+  .ticker { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; margin-bottom: 14px; overflow: hidden; white-space: nowrap; }
+  .ticker-inner { display: inline-block; animation: tick 25s linear infinite; }
+  @keyframes tick { to { transform: translateX(-50%); } }
+  .titem { display: inline; font-family: 'Space Mono', monospace; font-size: 11px; margin-right: 28px; }
+
+  /* LOADING */
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: s 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+
+  /* TWO-COL */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .profit-pos { color: var(--green); }
+  .profit-neg { color: var(--red); }
+
+  #pg-setup, #pg-dash { display: none; }
+  #pg-setup.show, #pg-dash.show { display: block; }
+
+  /* Safe area bottom */
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+</style>
+</head>
+<body>
+<div class="app safe-bottom">
+
+  <div class="header">
+    <div class="logo">GRID<span>BOT</span></div>
+    <div class="conn-status">
+      <span class="conn-label" id="lbl">DISCONNECTED</span>
+      <div class="dot" id="dot"></div>
+    </div>
+  </div>
+
+  <!-- SETUP PAGE -->
+  <div id="pg-setup" class="show">
+    <div class="alert alert-warn">
+      ⚠ API Key disimpan hanya di browser kamu.<br>
+      Set permission: <strong>Spot Trading ✓</strong><br>
+      Jangan aktifkan: <strong>Withdrawal ✗</strong>
+    </div>
+    <div class="card">
+      <div class="card-title">Binance API Setup</div>
+      <div class="field">
+        <label>API KEY</label>
+        <input type="text" id="akey" placeholder="Paste API Key..." autocomplete="off" autocorrect="off" autocapitalize="none">
+      </div>
+      <div class="field">
+        <label>SECRET KEY</label>
+        <input type="password" id="asecret" placeholder="Paste Secret Key..." autocomplete="off">
+      </div>
+      <div id="err-setup" class="alert alert-error" style="display:none"></div>
+      <button class="btn btn-primary" id="btn-conn">CONNECT</button>
+    </div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:14px;line-height:2;">
+      Binance → Profile → API Management → Create API<br>
+      ✓ Enable Spot Trading &nbsp; ✗ Disable Withdrawal
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="pg-dash">
+
+    <div class="ticker"><div class="ticker-inner" id="ticker">
+      <span class="titem">BTC/USDT <span class="up">—</span></span>
+      <span class="titem">ETH/USDT <span class="up">—</span></span>
+      <span class="titem">BNB/USDT <span class="up">—</span></span>
+      <span class="titem">SOL/USDT <span class="up">—</span></span>
+      <span class="titem">XRP/USDT <span class="up">—</span></span>&nbsp;&nbsp;&nbsp;
+      <span class="titem">BTC/USDT <span class="up">—</span></span>
+      <span class="titem">ETH/USDT <span class="up">—</span></span>
+      <span class="titem">BNB/USDT <span class="up">—</span></span>
+      <span class="titem">SOL/USDT <span class="up">—</span></span>
+      <span class="titem">XRP/USDT <span class="up">—</span></span>
+    </div></div>
+
+    <div class="card">
+      <div class="card-title">Spot Balance</div>
+      <div class="bal-grid">
+        <div class="bal-item">
+          <div class="bal-label">USDT</div>
+          <div class="bal-val" id="b-usdt">—</div>
+          <div class="bal-sub">Available</div>
+        </div>
+        <div class="bal-item">
+          <div class="bal-label">BTC</div>
+          <div class="bal-val" id="b-btc">—</div>
+          <div class="bal-sub">Available</div>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="loadBal()" style="width:100%;margin-top:6px;">↻ REFRESH</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="tab('create')">CREATE BOT</button>
+      <button class="tab" onclick="tab('bots')">RUNNING BOTS</button>
+    </div>
+
+    <!-- CREATE -->
+    <div id="t-create">
+      <div class="card">
+        <div class="card-title">Grid Bot Setup</div>
+        <div class="field">
+          <label>PAIR</label>
+          <select id="pair" onchange="fetchPrice()">
+            <option value="BTCUSDT">BTC / USDT</option>
+            <option value="ETHUSDT">ETH / USDT</option>
+            <option value="BNBUSDT">BNB / USDT</option>
+            <option value="SOLUSDT">SOL / USDT</option>
+            <option value="XRPUSDT">XRP / USDT</option>
+            <option value="DOGEUSDT">DOGE / USDT</option>
+            <option value="ADAUSDT">ADA / USDT</option>
+          </select>
+        </div>
+
+        <div class="price-row">
+          <div>
+            <div class="price-label">CURRENT PRICE</div>
+            <div class="price-val" id="c-price">...</div>
+          </div>
+          <div style="text-align:right">
+            <div class="price-label">24H CHANGE</div>
+            <div class="price-chg" id="c-chg">—</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label>LOWER ($)</label>
+            <input type="number" id="low" placeholder="0" oninput="preview()" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>UPPER ($)</label>
+            <input type="number" id="high" placeholder="0" oninput="preview()" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>GRIDS (2–170)</label>
+          <input type="number" id="grids" value="15" min="2" max="170" oninput="preview()" inputmode="numeric">
+        </div>
+
+        <div class="field">
+          <label>INVESTMENT (USDT)</label>
+          <input type="number" id="inv" placeholder="Amount in USDT" oninput="preview()" inputmode="decimal">
+        </div>
+
+        <div class="grid-preview">
+          <div class="grid-bars" id="gbars"></div>
+          <div class="grid-labels">
+            <span>$<span id="gl-low">—</span></span>
+            <span>NOW: $<span id="gl-now">—</span></span>
+            <span>$<span id="gl-high">—</span></span>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div class="est-row"><span class="est-label">PROFIT / GRID (EST)</span><span class="est-val" id="e-pg">—</span></div>
+          <div class="est-row"><span class="est-label">USDT / GRID</span><span class="est-val" id="e-ug">—</span></div>
+          <div class="est-row"><span class="est-label">MIN INVESTMENT</span><span class="est-val" id="e-min">—</span></div>
+        </div>
+
+        <div id="err-create" class="alert alert-error" style="display:none"></div>
+        <div id="ok-create" class="alert alert-ok" style="display:none"></div>
+        <button class="btn btn-primary" id="btn-create" onclick="createBot()">CREATE GRID BOT</button>
+
+        <div style="text-align:center;font-size:10px;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;line-height:1.7">
+          Bot runs directly on Binance.<br>Stop anytime from RUNNING BOTS tab.
+        </div>
+      </div>
+    </div>
+
+    <!-- RUNNING BOTS -->
+    <div id="t-bots" style="display:none">
+      <div id="bots-load" class="alert alert-warn"><span class="spin"></span>Loading bots...</div>
+      <div id="bots-list"></div>
+      <div id="bots-empty" style="display:none;text-align:center;padding:40px 0">
+        <div style="font-size:40px;margin-bottom:10px">🤖</div>
+        <div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;line-height:1.8">No bots running.<br>Create one in CREATE BOT tab.</div>
+      </div>
+      <button class="btn btn-sm" onclick="loadBots()" style="width:100%;margin-top:4px">↻ REFRESH</button>
+    </div>
+
+    <div style="margin-top:20px;text-align:center">
+      <button class="btn btn-danger" onclick="disconnect()">DISCONNECT</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PROXY = '/api/proxy';
+let S = { key: '', secret: '', prices: {} };
+
+// ── SIGN ──
+async function sign(qs) {
+  const enc = new TextEncoder();
+  const k = await crypto.subtle.importKey('raw', enc.encode(S.secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', k, enc.encode(qs));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function api(method, endpoint, params = {}) {
+  const ts = Date.now();
+  const p = { ...params, timestamp: ts };
+  const qs = new URLSearchParams(p).toString();
+  const sig = await sign(qs);
+  const url = `${PROXY}?path=${encodeURIComponent(endpoint.replace(/^\//,''))}&${qs}&signature=${sig}`;
+  const r = await fetch(url, { method, headers: { 'X-MBX-APIKEY': S.key } });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.msg || `Error ${r.status}`);
+  return d;
+}
+
+async function pub(endpoint, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `${PROXY}?path=${encodeURIComponent(endpoint.replace(/^\//,''))}${qs ? '&' + qs : ''}`;
+  const r = await fetch(url);
+  return r.json();
+}
+
+// ── CONNECT ──
+document.getElementById('btn-conn').addEventListener('click', async () => {
+  const key = document.getElementById('akey').value.trim();
+  const secret = document.getElementById('asecret').value.trim();
+  if (!key || !secret) return showErr('err-setup', 'Masukkan API Key dan Secret Key!');
+  S.key = key; S.secret = secret;
+  const btn = document.getElementById('btn-conn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>CONNECTING...';
+  hide('err-setup');
+  try {
+    await api('GET', '/api/v3/account');
+    document.getElementById('pg-setup').classList.remove('show');
+    document.getElementById('pg-dash').classList.add('show');
+    document.getElementById('dot').classList.add('on');
+    document.getElementById('lbl').textContent = 'CONNECTED';
+    await loadBal();
+    await fetchPrice();
+    startTicker();
+  } catch(e) {
+    S.key = ''; S.secret = '';
+    showErr('err-setup', `Gagal: ${e.message}`);
+  }
+  btn.disabled = false; btn.innerHTML = 'CONNECT';
+});
+
+// ── BALANCE ──
+async function loadBal() {
+  try {
+    const d = await api('GET', '/api/v3/account');
+    const u = d.balances.find(b => b.asset==='USDT');
+    const b = d.balances.find(b => b.asset==='BTC');
+    document.getElementById('b-usdt').textContent = u ? (+u.free).toFixed(2) : '0.00';
+    document.getElementById('b-btc').textContent = b ? (+b.free).toFixed(6) : '0.000000';
+  } catch(e) { console.error(e); }
+}
+
+// ── PRICE ──
+async function fetchPrice() {
+  const pair = document.getElementById('pair').value;
+  try {
+    const d = await pub('/api/v3/ticker/24hr', { symbol: pair });
+    const price = +d.lastPrice, chg = +d.priceChangePercent;
+    S.prices[pair] = price;
+    document.getElementById('c-price').textContent = `$${price.toLocaleString(undefined, {maximumFractionDigits: 6})}`;
+    const el = document.getElementById('c-chg');
+    el.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+    el.className = `price-chg ${chg >= 0 ? 'up' : 'dn'}`;
+    // Auto-fill range ±8%
+    const lo = document.getElementById('low');
+    const hi = document.getElementById('high');
+    if (!lo.value) {
+      const dec = price < 1 ? 5 : price < 100 ? 2 : 0;
+      lo.value = (price * 0.92).toFixed(dec);
+      hi.value = (price * 1.08).toFixed(dec);
+    }
+    preview();
+  } catch(e) { console.error(e); }
+}
+
+// ── PREVIEW ──
+function preview() {
+  const low = +document.getElementById('low').value;
+  const high = +document.getElementById('high').value;
+  const grids = +document.getElementById('grids').value || 15;
+  const inv = +document.getElementById('inv').value;
+  const pair = document.getElementById('pair').value;
+  const now = S.prices[pair] || 0;
+  if (!low || !high || low >= high) return;
+
+  const el = document.getElementById('gbars');
+  el.innerHTML = '';
+  const lines = Math.min(grids, 14);
+  for (let i = 0; i <= lines; i++) {
+    const p = low + (high - low) * (i / lines);
+    const div = document.createElement('div');
+    div.className = 'gbar' + (now >= p - (high-low)/lines/2 && now <= p + (high-low)/lines/2 ? ' cur' : '');
+    const fill = document.createElement('div');
+    fill.className = 'gbar-fill';
+    fill.style.width = `${(i/lines)*100}%`;
+    div.appendChild(fill); el.appendChild(div);
+  }
+
+  document.getElementById('gl-low').textContent = low.toLocaleString();
+  document.getElementById('gl-now').textContent = now.toLocaleString();
+  document.getElementById('gl-high').textContent = high.toLocaleString();
+
+  const pgPct = ((high/low)**(1/grids)-1)*100;
+  document.getElementById('e-pg').textContent = `${pgPct.toFixed(3)}%`;
+  document.getElementById('e-ug').textContent = inv ? `$${(inv/grids).toFixed(2)}` : '—';
+
+  // Min investment estimate
+  const minPerGrid = low / grids;
+  document.getElementById('e-min').textContent = `~$${(minPerGrid * grids * 2).toFixed(2)}`;
+}
+
+// ── CREATE BOT ──
+async function createBot() {
+  hide('err-create'); hide('ok-create');
+  const pair = document.getElementById('pair').value;
+  const low = +document.getElementById('low').value;
+  const high = +document.getElementById('high').value;
+  const grids = +document.getElementById('grids').value;
+  const inv = +document.getElementById('inv').value;
+  if (!low || !high || !grids || !inv) return showErr('err-create', 'Lengkapi semua field!');
+  if (low >= high) return showErr('err-create', 'Lower harus < Upper!');
+  if (grids < 2 || grids > 170) return showErr('err-create', 'Grids harus 2–170!');
+
+  const btn = document.getElementById('btn-create');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>CREATING...';
+  try {
+    const d = await api('POST', '/sapi/v1/algo/spot/newOrderGrid', {
+      symbol: pair, side: 'BOTH', quantity: inv,
+      upperPrice: high, lowerPrice: low, gridNum: grids,
+      gridType: 'ARITHMETIC', recvWindow: 5000
+    });
+    const ok = document.getElementById('ok-create');
+    ok.textContent = `✓ Bot created! ID: ${d.orderId}`;
+    ok.style.display = 'block';
+    setTimeout(() => { tab('bots'); loadBots(); }, 1500);
+  } catch(e) {
+    showErr('err-create', `Gagal: ${e.message}`);
+  }
+  btn.disabled = false; btn.innerHTML = 'CREATE GRID BOT';
+}
+
+// ── BOTS ──
+async function loadBots() {
+  const el = document.getElementById('bots-load');
+  el.style.display = 'block'; el.innerHTML = '<span class="spin"></span>Loading...';
+  document.getElementById('bots-list').innerHTML = '';
+  hide('bots-empty');
+  try {
+    const d = await api('GET', '/sapi/v1/algo/spot/openOrders');
+    const bots = d.orders || [];
+    el.style.display = 'none';
+    if (!bots.length) { document.getElementById('bots-empty').style.display = 'block'; return; }
+    const list = document.getElementById('bots-list');
+    bots.forEach(bot => {
+      const pnl = +(bot.totalProfit || 0);
+      const pc = pnl >= 0 ? 'profit-pos' : 'profit-neg';
+      const rt = runtime(bot.bookTime);
+      const sym = bot.symbol.replace('USDT', '/USDT');
+      list.innerHTML += `
+        <div class="bot-item">
+          <div class="bot-head">
+            <span class="bot-pair">${sym}</span>
+            <span class="bot-badge">● RUNNING</span>
+          </div>
+          <div class="bot-grid3">
+            <div class="bot-stat"><div>GRIDS</div><div class="bot-stat-val">${bot.gridNum}</div></div>
+            <div class="bot-stat"><div>RUNTIME</div><div class="bot-stat-val">${rt}</div></div>
+            <div class="bot-stat"><div>PNL</div><div class="bot-stat-val ${pc}">${pnl>=0?'+':''}$${pnl.toFixed(2)}</div></div>
+          </div>
+          <div class="bot-foot">
+            <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">
+              $${(+bot.lowerLimit).toLocaleString()} – $${(+bot.upperLimit).toLocaleString()}
+            </span>
+            <button class="btn btn-danger" onclick="stopBot('${bot.orderId}')">STOP</button>
+          </div>
+        </div>`;
+    });
+  } catch(e) {
+    el.innerHTML = `Error: ${e.message}`; el.className = 'alert alert-error';
+  }
+}
+
+async function stopBot(id) {
+  if (!confirm('Stop bot ini? Semua open orders akan dibatalkan.')) return;
+  try {
+    await api('DELETE', '/sapi/v1/algo/spot/order', { orderId: id });
+    loadBots();
+  } catch(e) { alert(`Gagal stop: ${e.message}`); }
+}
+
+function runtime(ts) {
+  const h = Math.floor((Date.now()-ts)/3600000);
+  const d = Math.floor(h/24);
+  return d > 0 ? `${d}d ${h%24}h` : `${h}h`;
+}
+
+// ── TICKER ──
+async function startTicker() {
+  const pairs = ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT'];
+  try {
+    const data = await Promise.all(pairs.map(p => pub('/api/v3/ticker/24hr', { symbol: p })));
+    const inner = document.getElementById('ticker');
+    const items = data.map(d => {
+      const c = +d.priceChangePercent;
+      const sym = d.symbol.replace('USDT', '/USDT');
+      return `<span class="titem">${sym} <span class="${c>=0?'up':'dn'}">${c>=0?'+':''}${c.toFixed(2)}%</span></span>`;
+    }).join('');
+    inner.innerHTML = items + '&nbsp;&nbsp;&nbsp;' + items;
+  } catch(e) {}
+  setTimeout(startTicker, 30000);
+}
+
+// ── HELPERS ──
+function tab(t) {
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', (i===0&&t==='create')||(i===1&&t==='bots')));
+  document.getElementById('t-create').style.display = t==='create' ? 'block' : 'none';
+  document.getElementById('t-bots').style.display = t==='bots' ? 'block' : 'none';
+  if (t==='bots') loadBots();
+}
+function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function disconnect() {
+  S = { key:'', secret:'', prices:{} };
+  document.getElementById('pg-dash').classList.remove('show');
+  document.getElementById('pg-setup').classList.add('show');
+  document.getElementById('dot').classList.remove('on');
+  document.getElementById('lbl').textContent = 'DISCONNECTED';
+  document.getElementById('akey').value = '';
+  document.getElementById('asecret').value = '';
+}
+
+setInterval(() => { if (S.key) fetchPrice(); }, 30000);
+</script>
+</body>
+</html>
